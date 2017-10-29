@@ -129,9 +129,10 @@ int main(int argc, const char * argv[]) {
   size_t device_work_size[2] = {width, height};
   size_t device_work_offset[2] = {0, 0};
   size_t offset = 0;
+  cl_event done;
 
   // This is where the OpenCL computations starts.
-  err = clEnqueueNDRangeKernel(cmd_queue, kernel, 2, device_work_offset, device_work_size, NULL, 0, NULL, NULL);
+  err = clEnqueueNDRangeKernel(cmd_queue, kernel, 2, device_work_offset, device_work_size, NULL, 0, NULL, &done);
   if(err != CL_SUCCESS) {
     printf("Failed run program.\n");
     return -1;
@@ -149,7 +150,7 @@ int main(int argc, const char * argv[]) {
 
   // hmm, we should make sure that all operations are done!
   printf("Enqueue read global buffer to heap buffer\n");      
-  err = clEnqueueReadBuffer(cmd_queue, global_buffer, CL_FALSE, offset, image_size, host_buffer, 0, NULL, NULL);
+  err = clEnqueueReadBuffer(cmd_queue, global_buffer, CL_FALSE, offset, image_size, host_buffer, 1, &done, NULL);
   if(err != CL_SUCCESS) {
     printf("Failed to read buffer.\n");
     return -1;
