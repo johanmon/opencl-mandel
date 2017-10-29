@@ -1,10 +1,8 @@
-An example of how to use OpenCL.
+# An example of how to use OpenCL.
+
+In order to learn some OpenCL programming I got hold of a AMD GPU,
+W7100, and started to experiment with what should be the fisrt thing
+anyone should do: creating a mandelbrot image.
 
 
 
-
-Some images:
-
-width x height:  2560 x 1080
-
-x0 x y0 x k : -014 x 0.8422 x 0.0000035
