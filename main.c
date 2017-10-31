@@ -21,6 +21,10 @@
 #define PLATFORM 0
 #define DEVICE 0
 
+// The OpenCl program
+#define PROGRAM "mandelbrot.cl"
+#define PROCEDURE "render"
+
 // We query the node for existing platforms.
 #define MAX_PLATFORMS 16
 #define MAX_DEVICES 16
@@ -37,10 +41,6 @@ int main(int argc, const char * argv[]) {
   cl_program  program;    
 
   cl_mem global_buffer;
-
-  // This is the kernel program and the procedure to call.
-  const char *prgrm_file_name = "mandelbrot.cl";
-  const char *prgrm_proc_name = "render";  
 
   int width = 1980;
   int height = 1080;
@@ -68,7 +68,7 @@ int main(int argc, const char * argv[]) {
 
   // We're now ready to set up the OpenCL device for the computation. 
   
-  printf("Creating context on platform %d, device %d.\n", PLATFORM, DEVICE);
+  printf("Creating context on platform %d, deviec %d.\n", PLATFORM, DEVICE);
   
   // This will create a context attached to a device.
   err = create_opencl_context(PLATFORM, DEVICE, &context, &device);
@@ -80,7 +80,7 @@ int main(int argc, const char * argv[]) {
   printf("Creating queue for context.\n");
   
   // Create a queue attached to the context and device.
-  cmd_queue = clCreateCommandQueue(context, device, 0, &err);
+  cmd_queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
   if(err != CL_SUCCESS) {
     printf("Failed to create queue.\n");
     return -1;
@@ -98,7 +98,7 @@ int main(int argc, const char * argv[]) {
   printf("Loading OpenCL source program\n");
   
   // Load the OpenCL source program.
-  err = create_opencl_program(context, prgrm_file_name, &program);
+  err = create_opencl_program(context, PROGRAM, &program);
   if(err != CL_SUCCESS) {
     printf("Failed to load program.\n");
     return -1;
@@ -106,7 +106,7 @@ int main(int argc, const char * argv[]) {
 
   printf("Creating OpenCL kernel\n");
   
-  kernel = clCreateKernel(program, prgrm_proc_name, &err);
+  kernel = clCreateKernel(program, PROCEDURE, &err);
   if(err != CL_SUCCESS) {
     printf("Failed to create kernel.\n");
     return -1;
@@ -127,12 +127,10 @@ int main(int argc, const char * argv[]) {
 
   printf("Enqueue of kernels\n");    
   size_t device_work_size[2] = {width, height};
-  size_t device_work_offset[2] = {0, 0};
-  size_t offset = 0;
-  cl_event done;
+  // cl_event done;
 
   // This is where the OpenCL computations starts.
-  err = clEnqueueNDRangeKernel(cmd_queue, kernel, 2, device_work_offset, device_work_size, NULL, 0, NULL, &done);
+  err = clEnqueueNDRangeKernel(cmd_queue, kernel, 2, NULL, device_work_size, NULL, 0, NULL, NULL);
   if(err != CL_SUCCESS) {
     printf("Failed run program.\n");
     return -1;
@@ -150,14 +148,14 @@ int main(int argc, const char * argv[]) {
 
   // hmm, we should make sure that all operations are done!
   printf("Enqueue read global buffer to heap buffer\n");      
-  err = clEnqueueReadBuffer(cmd_queue, global_buffer, CL_FALSE, offset, image_size, host_buffer, 1, &done, NULL);
+  err = clEnqueueReadBuffer(cmd_queue, global_buffer, CL_TRUE, 0, image_size, host_buffer, 0, NULL, NULL);
   if(err != CL_SUCCESS) {
     printf("Failed to read buffer.\n");
     return -1;
   }
 
   printf("Waiting until done.\n");    
-  clFinish(cmd_queue);
+  // clFinish(cmd_queue);
 
   printf("Sync:ing and closing file .\n");      
   sync_and_close_file(fd, file_map, total_size);
@@ -168,91 +166,6 @@ int main(int argc, const char * argv[]) {
   clReleaseContext(context);
 
   return 0;
-}
-
-
-int sync_and_close_file(int fd, char *file_map, int total_size) {
-
-  // The image should now be in main memory and it's time to write it to the file.
-  printf("Sync buffer to file .\n");      
-  if (msync(file_map, total_size, MS_SYNC) == -1) {
-    printf("Failed to sync the file to disk\n");
-    return -1;
-  }
-
-  // Done, let's unmap the file. 
-  printf("Unmap file from memory.\n");        
-  if (munmap(file_map, total_size) == -1) {
-    printf("Failed to  un-mmap the file\n");
-    return -1;
-  }
-  // .. and close it.
-  close(fd);
-}
-
-int open_and_map_file(double x0, double y0, double incr, int width, int height, int depth, int *file_descr, char **file_map, char **host_buffer) {
-
-  // In the end everytghing will be in this file. 
-  const char *filepath = "image.ppm";
-
-  // Open the output file for reading and writing.
-  int fd = open(filepath, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
-    
-  if (fd== -1) {
-    printf("Failed to open file %s\n", filepath);
-    return -1;
-  }
-
-  // The file should start with a .ppm header containing information abut the image. 
-  
-  // 256 bytes should be enough for the header.
-  char header[256];
-
-  // The header, including a comment (will be copied to .jpg image).
-  int header_length = sprintf(&header, "P6\n# Mandelbrot image: x0 = %f y0 = %f k = %f width = %d height = %d depth = %d\n%d %d\n255\n",
-			                                        x0,     y0,     incr,  width,     height,     depth,     width, height);
-
-  printf("Header of .ppm file\n%s\n", header);
-
-  // This is the tola size of the final file. 
-  int total_size = header_length + width*height*3;
-
-  // Extend the file to its full length.
-  if (lseek(fd, total_size, SEEK_SET) == -1)  {
-    close(fd);
-    printf("Failed to extend file to size  %d\n", total_size);
-    return -1;
-  }
-
-  // This is needed before we map the file. 
-  if (write(fd, "", 1) == -1) {
-    close(fd);
-    printf("Failed writing last byte of the file");
-    return -1;
-  }
-
-  // We now use mmap to map the whole file to a memory area. 
-  char *map = mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-
-  if (map == MAP_FAILED)  {
-      printf("Failed to map file\n");
-      close(fd);
-      return -1;
-  }
-  
-  // We write the header to the beginning of the maped file.
-  strcpy(map, header);
-
-  // The file descriptor.   
-  *file_descr = fd;
-
-  // This is the whole map
-  *file_map = map;
-  
-  // The host_buffer is where the image starts. 
-  *host_buffer = &map[header_length];
-
-  return total_size;
 }
 
 
@@ -348,7 +261,7 @@ cl_int create_opencl_program(cl_context context, const char *filename, cl_progra
 
   printf("Building OpenCL program.\n");
   
-  err = clBuildProgram(*program, 0, NULL, NULL, NULL, NULL);
+  err = clBuildProgram(*program, NULL, 0, NULL, NULL, NULL);
   if(err != CL_SUCCESS) {
     printf("Failed to build program.\n");
     return err;
@@ -361,6 +274,86 @@ cl_int create_opencl_program(cl_context context, const char *filename, cl_progra
 }
 
 
+int open_and_map_file(double x0, double y0, double incr, int width, int height, int depth, int *file_descr, char **file_map, char **host_buffer) {
 
+  // In the end everytghing will be in this file. 
+  const char *filepath = "image.ppm";
 
+  // Open the output file for reading and writing.
+  int fd = open(filepath, O_RDWR | O_CREAT | O_TRUNC, (mode_t)0600);
+    
+  if (fd== -1) {
+    printf("Failed to open file %s\n", filepath);
+    return -1;
+  }
 
+  // The file should start with a .ppm header containing information abut the image. 
+  
+  // 256 bytes should be enough for the header.
+  char header[256];
+
+  // The header, including a comment (will be copied to .jpg image).
+  int header_length = sprintf(&header, "P6\n# Mandelbrot image: x0 = %f y0 = %f k = %f width = %d height = %d depth = %d\n%d %d\n255\n",
+			                                        x0,     y0,     incr,  width,     height,     depth,     width, height);
+
+  printf("Header of .ppm file\n%s\n", header);
+
+  // This is the tola size of the final file. 
+  int total_size = header_length + width*height*3;
+
+  // Extend the file to its full length.
+  if (lseek(fd, total_size, SEEK_SET) == -1)  {
+    close(fd);
+    printf("Failed to extend file to size  %d\n", total_size);
+    return -1;
+  }
+
+  // This is needed before we map the file. 
+  if (write(fd, "", 1) == -1) {
+    close(fd);
+    printf("Failed writing last byte of the file");
+    return -1;
+  }
+
+  // We now use mmap to map the whole file to a memory area. 
+  char *map = mmap(0, total_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+
+  if (map == MAP_FAILED)  {
+      printf("Failed to map file\n");
+      close(fd);
+      return -1;
+  }
+  
+  // We write the header to the beginning of the maped file.
+  strcpy(map, header);
+
+  // The file descriptor.   
+  *file_descr = fd;
+
+  // This is the whole map
+  *file_map = map;
+  
+  // The host_buffer is where the image starts. 
+  *host_buffer = &map[header_length];
+
+  return total_size;
+}
+
+int sync_and_close_file(int fd, char *file_map, int total_size) {
+
+  // The image should now be in main memory and it's time to write it to the file.
+  printf("Sync buffer to file .\n");      
+  if (msync(file_map, total_size, MS_SYNC) == -1) {
+    printf("Failed to sync the file to disk\n");
+    return -1;
+  }
+
+  // Done, let's unmap the file. 
+  printf("Unmap file from memory.\n");        
+  if (munmap(file_map, total_size) == -1) {
+    printf("Failed to  un-mmap the file\n");
+    return -1;
+  }
+  // .. and close it.
+  close(fd);
+}
