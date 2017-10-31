@@ -28,9 +28,9 @@ The first thing we need to do is to create a `context`, we have
 delegated this to a procedure since this a probably something that we
 later want to reuse.
 
-``C
+```C
   err = create_opencl_context(PLATFORM, DEVICE, &context, &device);
-``
+```
 
 What we need to know is what `PLATFORM` and which `DEVICE` on the
 platform that we want to create the connect on. If you (as me) only
@@ -49,9 +49,9 @@ The next thing we do is to create a queue, `cmd_queue`. that we need
 in order to schedule our kernels. We create a default queue, `0`, that will
 schedule kernels in FIFO order, have a default size etc.
 
-``C
+```C
 cmd_queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
-`` 
+``` 
 
 ### create a buffer
 
@@ -62,9 +62,9 @@ allocated on the device i.e. not in our main memory. We provide the
 size of the buffer that is width*height*3 since we will produce a rgb
 image. 
 
-``C
+```C
   global_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, image_size, NULL, &err);
-``
+```
 
 The kernels, the programs that will execute on the GPU, will
 only write to the buffer and we do not have a buffer in main memory
@@ -79,9 +79,9 @@ depend on the particular device that you want to use. If we had
 several devices we would need to keep track of which binary to use for
 which device (it is possible to do offline compilation).
 
-``C
+```C
   create_opencl_program(context, PROGRAM, &program);
-``
+```
 
 We will later take a look at the steps needed to do the compilation
 but for now let's assume that we have compiled kernel `program`.
@@ -91,21 +91,21 @@ but for now let's assume that we have compiled kernel `program`.
 Time to create the kernel. It consists of the compiled program and the
 name of the procedure that we wan to call. 
 
-``C
+```C
   kernel = clCreateKernel(program, PROCEDURE, &err);
-``
+```
 
 We're almost there, but first we have to provide the arguments to the
 kernel program. We provide a pointer to the `global_buffer` (that is
 on the device), the `depth`, upper left corner, `x0` and `y0`, and the increment per pixel. 
 
-``C
+```C
   clSetKernelArg(kernel, 0, sizeof(cl_mem), &global_buffer);
   clSetKernelArg(kernel, 1, sizeof(int), &depth);
   clSetKernelArg(kernel, 2, sizeof(double), &x0);
   clSetKernelArg(kernel, 3, sizeof(double), &y0);
   clSetKernelArg(kernel, 4, sizeof(double), &incr);      
-``
+```
 
 Note that there is no argument here that will tell the kernel program
 which pixel it should work on. All instances of this kernel are given
