@@ -121,11 +121,11 @@ and the dimension of the computation `2`. We also provide the total
 size of this 2D space `{width, height}` and this how the system knows
 how many kernels it should spawn. 
 
-``C
+```C
   size_t device_work_size[2] = {width, height};
 
   clEnqueueNDRangeKernel(cmd_queue, kernel, 2, NULL, device_work_size, NULL, 0, NULL, NULL);
-``
+```
 
 We will later see that the kernel program can figure out which kernel
 it is in the 2D space. When, for example, it knows that it is
@@ -153,9 +153,9 @@ queue an event that copies the `global_buffer` to our mapped file
 directly. I don't know if this is faster but it's more fun :-)
 
 
-``C
+```C
   int total_size = open_and_map_file(x0, y0, incr, width, height, depth, &fd, &file_map, &host_buffer);
-``
+```
 
 For now we hide the details of how this mapping is done. In the end we
 will have a file descriptor, `fd`, a pointer to the the map-ed region,
@@ -169,9 +169,9 @@ specifies that we want the command to be blocking i.e. we will not
 proceed unless the command has finished. 
 
 
-``C
+```C
   clEnqueueReadBuffer(cmd_queue, global_buffer, CL_TRUE, 0, image_size, host_buffer, 0, NULL, NULL);
-``
+```
 
 ### sync the file
 
@@ -179,20 +179,20 @@ We should now have the image in our `host_buffer` which is of course
 the memory map of our file. The only thing we need to do now is to
 synchronize the file and close it; file operations that we hide in a procedure. 
 
-``C
+```C
   sync_and_close_file(fd, file_map, total_size);
-``
+```
 
 ### done
 
 The only thing left is to clean up (and I guess that this will done
 anyway since we terminate the process but it looks professional).
 
-``C
+```C
   clReleaseMemObject(global_buffer);
   clReleaseCommandQueue(cmd_queue);
   clReleaseContext(context);
-``
+```
 
 ## The OpenCL-C code
 
@@ -205,9 +205,9 @@ through the whole program but the interesting part is in how the kernel
 program knows its position in the computation.
 
 
-``C
+```C
 __kernel void render(__global char *out, int max, double x0, double y0, double k) {
-``
+```
 
 The `__kernel` directive specifies that this procedure can be an entry
 point to the program. We never return anything so our procedure is
@@ -221,11 +221,11 @@ computation we should have two values there. We also read the total
 size of the width dimension since we need this to find the right
 position in the `global_buffer`.
 
-``C
+```C
       int x = get_global_id(0);
       int y = get_global_id(1);
       size_t width = get_global_size(0);
-``
+```
 
 The rest of the code in `mandelbrot.cl` is (almost) plain C and there
 is no magic there.
@@ -245,23 +245,23 @@ forward and is done in a sequence of queries.
 
 First we find all platforms of our host:
 
-``C
+```C
   clGetPlatformIDs(MAX_PLATFORMS, &platform_id, &num_platforms);
-``
+```
 
 Then we find the devices on the platform of our choice (the only one):
 
-``C
+```C
   clGetDeviceIDs(platform_id[pl], CL_DEVICE_TYPE_DEFAULT, MAX_DEVICES, &device_id, &num_devices);
-``
+```
 
 In the end we create the context on the device we have chosen:
 
-``C
+```C
   *device = device_id[dev];
 
   *context = clCreateContext(NULL, 1, device, NULL, NULL, &err);
-``
+```
 
 
 ### building the program
@@ -271,18 +271,18 @@ first have to read the file and place it in a `source` memory
 buffer. We can provide an array of program sources and there are some
 options on how these are stored but in our case it's straight forward.
 
-``C
+```C
   *program = clCreateProgramWithSource(context, 1, (const char**)&source, NULL, &err);
-``
+```
 
 Once we have a `program` we can do the compilation of the
 program. There are number of parameters here, we could for example
 provide compiler directives, but in our case we can do with the
 default.
 
-``C
+```C
   clBuildProgram(*program, 0, NULL, NULL, NULL, NULL);
-``
+```
 
 ### the image file
 
