@@ -29,7 +29,7 @@ delegated this to a procedure since this a probably something that we
 later want to reuse.
 
 ```C
-  err = create_opencl_context(PLATFORM, DEVICE, &context, &device);
+  create_opencl_context(PLATFORM, DEVICE, &context, &device);
 ```
 
 What we need to know is what `PLATFORM` and which `DEVICE` on the
@@ -50,7 +50,7 @@ in order to schedule our kernels. We create a default queue, `0`, that will
 schedule kernels in FIFO order, have a default size etc.
 
 ```C
-cmd_queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
+  cmd_queue = clCreateCommandQueueWithProperties(context, device, 0, &err);
 ``` 
 
 ### create a buffer
