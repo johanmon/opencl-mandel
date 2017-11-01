@@ -139,48 +139,33 @@ queue the next job.
 ### reading the buffer
 
 When all kernels have executed the mandelbrot image will be in the
-buffer on the device. We of course want in on a file so we need to
+buffer on the device. We of course want it on a file so we need to
 read this buffer to our main memory. We do not have direct access to
-the buffer but can en-queue a task that will copy the buffer to a
-buffer that we have prepared in main memory. Once we have the image in
+the buffer but can en-queue a task that will copy the image buffer to a
+host buffer that we have prepared in main memory. Once we have the image in
 memory we can write it to a file.
 
-There are several way to write a buffer to a file and we will now do
-it the fun way. Instead of writing a buffer, byte by byte, to a file
-we will open a file and map it to memory using `mmap()`. The trick is
-to first map the file (that is empty) to a buffer in memory and then
-queue an event that copies the `global_buffer` to our mapped file
-directly. I don't know if this is faster but it's more fun :-)
-
-
 ```C
-  int total_size = open_and_map_file(x0, y0, incr, width, height, depth, &fd, &file_map, &host_buffer);
+  char *host_buffer = malloc(image_size);
 ```
 
-For now we hide the details of how this mapping is done. In the end we
-will have a file descriptor, `fd`, a pointer to the the map-ed region,
-`file_map` and a pointer to where the buffer starts, `host_buffer`
-(the file has a header in the beginning so the buffer starts a bit
-later).
-
-The interesting thing is the pointer to the buffer area since this is
+The interesting thing is the pointer to the buffer area, since this is
 what we need when we en-queue our read command. The `CL_TRUE` flag
 specifies that we want the command to be blocking i.e. we will not
 proceed unless the command has finished. 
-
 
 ```C
   clEnqueueReadBuffer(cmd_queue, global_buffer, CL_TRUE, 0, image_size, host_buffer, 0, NULL, NULL);
 ```
 
-### sync the file
+### write the file
 
 We should now have the image in our `host_buffer` which is of course
 the memory map of our file. The only thing we need to do now is to
-synchronize the file and close it; file operations that we hide in a procedure. 
+create the file and close it
 
 ```C
-  sync_and_close_file(fd, file_map, total_size);
+  save_to_file(x0, y0, incr, width, height, depth, host_buffer);
 ```
 
 ### done
@@ -263,7 +248,6 @@ In the end we create the context on the device we have chosen:
   *context = clCreateContext(NULL, 1, device, NULL, NULL, &err);
 ```
 
-
 ### building the program
 
 The only tricky thing with the building of the program is that we
@@ -286,14 +270,8 @@ default.
 
 ### the image file
 
-We did some tricks in order to store the image in a file. We open a
-file and then extend it in length so that our image will fit. When we
-have forced the file to be of the right size we `mmap()` the file. The
-only tricky part here is that the length of the header can vary in
-size, we need to know where the image is supposed to start.
-
-The code would be simpler if we simply opened a file and wrote to it
-but this might be quicker since the operating system can synchronize
-who pages at a time (don't know if it makes a difference).
-
+The image file is ppm file, the Unix equivalent of a .bmp file. It has
+a short header that describes the content and then it is simply three
+bytes per pixel i.e. the rgb-values.  We include a comment with the
+information about how the image was rendered.
 
