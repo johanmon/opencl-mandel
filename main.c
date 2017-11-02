@@ -1,5 +1,8 @@
 #include <stdlib.h>
 
+// write()
+#include <unistd.h>
+
 // printf()
 #include <stdio.h>
 
@@ -20,6 +23,13 @@
 // gettimeofday()
 #include <sys/time.h>
 
+
+
+int save_to_file(double x0, double y0, double incr, int width, int height, int depth, char *buffer);
+
+cl_int create_opencl_context(int pl, int dev, cl_context *context, cl_device_id *device);
+
+cl_int create_opencl_program(cl_context context, const char *filename, cl_program *program);
 
 // This is the device and platform that we are going to use.
 #define PLATFORM 0
@@ -175,10 +185,10 @@ int main(int argc, const char * argv[]) {
 
   gettimeofday(&t3, NULL);
 
-  printf("Platform setup in %d ms\n", (t1.tv_sec - t0.tv_sec)*1000 + (t1.tv_usec - t0.tv_usec)/1000);  
-  printf("Image rendered in %d ms\n", (t2.tv_sec - t1.tv_sec)*1000 + (t2.tv_usec - t1.tv_usec)/1000);
-  printf("Saving file    in %d ms\n", (t3.tv_sec - t2.tv_sec)*1000 + (t3.tv_usec - t2.tv_usec)/1000);
-  printf("Total time        %d ms\n", (t3.tv_sec - t0.tv_sec)*1000 + (t3.tv_usec - t0.tv_usec)/1000);    
+  printf("Platform setup in %ld ms\n", (t1.tv_sec - t0.tv_sec)*1000 + (t1.tv_usec - t0.tv_usec)/1000);  
+  printf("Image rendered in %ld ms\n", (t2.tv_sec - t1.tv_sec)*1000 + (t2.tv_usec - t1.tv_usec)/1000);
+  printf("Saving file    in %ld ms\n", (t3.tv_sec - t2.tv_sec)*1000 + (t3.tv_usec - t2.tv_usec)/1000);
+  printf("Total time        %ld ms\n", (t3.tv_sec - t0.tv_sec)*1000 + (t3.tv_usec - t0.tv_usec)/1000);    
 
   return 0;
 }
@@ -290,7 +300,7 @@ cl_int create_opencl_program(cl_context context, const char *filename, cl_progra
 
 
 
-void save_to_file(double x0, double y0, double incr, int width, int height, int depth, char *buffer) {
+int save_to_file(double x0, double y0, double incr, int width, int height, int depth, char *buffer) {
 
   // In the end everytghing will be in this file. 
   const char *filepath = "image.ppm";
