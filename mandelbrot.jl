@@ -21,13 +21,14 @@ end
 function color(n, d)
     i = Int(trunc(d/3))
     x = div(n,i) ## x is [0,1,2]
-    if x == 0 
-        return RGB24(0,0,n/255)
+    if x == 0
+        y = n/i
+        return RGB24(0,0,y)
     elseif x == 1
-        y = (n -i)/255
+        y = (n -i)/i
         return RGB24(0,y,1-y )
     else
-        y = (n -2i)/255
+        y = (n -2i)/i
         return RGB24(y,1-y,0)
     end
 end
@@ -36,7 +37,6 @@ end
 function mandel(w, h, z, k, d)
 
     image = Array{RGB24,2}(h, w)
-    
     for i = 1:h, j = 1:w
         pix = z + ((j-1)*k) +  ((i-1)*-k)im
         image[i,j] = color(probe(pix, d), d)
@@ -63,6 +63,11 @@ function demo_waves()
     render(x, y, k, 768, w, h)    
 end
 
+function bench()
+    @time mandel(1920, 1080, (-0.14 + (0.8422)im),  0.0000035, 1024)
+    true
+end
+    
 
 
 
