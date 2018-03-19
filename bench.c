@@ -30,19 +30,19 @@ void color(int depth, int max, char *out);
 
 int main(int argc, const char * argv[]) {
 
-  int width = 1980;
+  int width = 1920;
   int height = 1080;
   int depth = 1024;
-  double x0 = -2.0;
-  double y0 =  1.0;
-  double incr = 0.002;
+  double x0 = -0.14;    
+  double y0 =  0.8422;
+  double incr = 0.0000035;
 
   struct timeval t0,t1,t2,t3,t4;
   
   // The arguments to the program, specifies the image.
   if(argc < 7) {
     printf("usage: mandelbrot <width> <height> <depth> <x-upper> <y-left> <k-incr>\n");
-    printf("will use deafult values\n");
+    printf("will use deafult values: 1920 1080 1024 -0.14 0.8422 0.0000035\n");
   } else {
     width = atoi(argv[1]);
     height = atoi(argv[2]);    
