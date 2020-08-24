@@ -1,6 +1,7 @@
 C = gcc
 CFLAGS = -w
-OPENCL = -lOpenCL
+OPENCL = -L/opt/amdgpu-pro/lib/x86_64-linux-gnu/ -lOpenCL
+
 
 all: image.jpg
 
@@ -12,7 +13,7 @@ image.ppm: mandelbrot.cl mandelbrot
 
 
 mandelbrot: main.c 
-	$(C) $(CFLAGS)  -o mandelbrot main.c  $(OPENCL)
+	$(C) $(CFLAGS) -o mandelbrot main.c  $(OPENCL)
 
 
 %.o: %.c %.h
